@@ -21,13 +21,24 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
         }
 
         input, select, button {
-            margin-bottom: 10px;
-            padding: 8px;
             width: 100%;
+            padding: 8px;
             box-sizing: border-box;
+            margin-bottom: 10px;
         }
 
         button {
@@ -41,13 +52,41 @@
         button:hover {
             background-color: #45a049;
         }
+
+        #hasil {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
 
+<?php
+    function konversiMataUang($jumlah, $dariMataUang, $keMataUang) {
+        $url = 'https://open.er-api.com/v6/latest/' . $dariMataUang;
+        $data = file_get_contents($url);
+        $respons = json_decode($data);
+
+        if ($respons && isset($respons->rates->{$keMataUang})) {
+            $hasil = $jumlah * $respons->rates->{$keMataUang};
+            $hasil = number_format($hasil, 2, ',', '.');
+            return $jumlah . ' ' . $dariMataUang . ' = ' . $hasil . ' ' . $keMataUang;
+        } else {
+            return 'Data kurs tidak valid.';
+        }
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $jumlah = $_POST['jumlah'];
+        $dariMataUang = $_POST['dariMataUang'];
+        $keMataUang = $_POST['keMataUang'];
+
+        $hasilKonversi = konversiMataUang($jumlah, $dariMataUang, $keMataUang);
+    }
+?>
+
 <div id="konverter">
     <h2>Konverter Mata Uang</h2>
-    <form id="formKonversi">
+    <form method="post">
         <label for="jumlah">Jumlah:</label>
         <input type="number" id="jumlah" name="jumlah" step="0.01" required>
 
@@ -64,36 +103,15 @@
             <option value="IDR">IDR (Rupiah Indonesia)</option>
         </select>
 
-        <button type="button" onclick="konversiMataUang()">Konversi</button>
+        <button type="submit">Konversi</button>
     </form>
 
-    <div id="hasil"></div>
+    <?php
+        if (isset($hasilKonversi)) {
+            echo '<div id="hasil">' . $hasilKonversi . '</div>';
+        }
+    ?>
 </div>
-
-<script>
-    function konversiMataUang() {
-        var jumlah = document.getElementById('jumlah').value;
-        var dariMataUang = document.getElementById('dariMataUang').value;
-        var keMataUang = document.getElementById('keMataUang').value;
-
-        var xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState == 4 && xhr.status == 200) {
-                var respons = JSON.parse(xhr.responseText);
-                var hasil = jumlah * respons.rates[keMataUang];
-                
-                // Menambahkan pemisah ribuan pada hasil konversi
-                hasil = hasil.toLocaleString('id-ID', { style: 'currency', currency: keMataUang });
-
-                document.getElementById('hasil').innerHTML = jumlah + ' ' + dariMataUang + ' = ' + hasil;
-            }
-        };
-
-        var url = 'https://open.er-api.com/v6/latest/' + dariMataUang;
-        xhr.open('GET', url, true);
-        xhr.send();
-    }
-</script>
 
 </body>
 </html>
